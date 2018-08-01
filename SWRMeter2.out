@@ -1,0 +1,39 @@
+jal 2.4o (compiled May  8 2011)
+generating p-code
+swrhelpers.jal:281: warning: assignment to smaller type; truncation possible
+swrhelpers.jal:300: warning: assignment to smaller type; truncation possible
+swrhelpers.jal:301: warning: assignment to smaller type; truncation possible
+Z:\iCloud Drive\JALProjecten\SWR\SWRMeter2.jal:42: warning: assignment to smaller type; truncation possible
+Z:\iCloud Drive\JALProjecten\SWR\SWRMeter2.jal:42: warning: assignment to smaller type; truncation possible
+Z:\iCloud Drive\JALProjecten\SWR\SWRMeter2.jal:46: warning: assignment to smaller type; truncation possible
+Z:\iCloud Drive\JALProjecten\SWR\SWRMeter2.jal:46: warning: assignment to smaller type; truncation possible
+Z:\iCloud Drive\JALProjecten\SWR\SWRMeter2.jal:87: warning: assignment to smaller type; truncation possible
+Z:\iCloud Drive\JALProjecten\SWR\SWRMeter2.jal:87: warning: assignment to smaller type; truncation possible
+Z:\iCloud Drive\JALProjecten\SWR\SWRMeter2.jal:89: warning: assignment to smaller type; truncation possible
+Z:\iCloud Drive\JALProjecten\SWR\SWRMeter2.jal:89: warning: assignment to smaller type; truncation possible
+Z:\iCloud Drive\JALProjecten\SWR\SWRMeter2.jal:215: warning: assignment to smaller type; truncation possible
+Z:\iCloud Drive\JALProjecten\SWR\SWRMeter2.jal:229: warning: assignment to smaller type; truncation possible
+Z:\iCloud Drive\JALProjecten\SWR\SWRMeter2.jal:242: warning: assignment to smaller type; truncation possible
+Z:\iCloud Drive\JALProjecten\SWR\SWRMeter2.jal:754: warning: assignment to smaller type; truncation possible
+Z:\iCloud Drive\JALProjecten\SWR\SWRMeter2.jal:760: warning: assignment to smaller type; truncation possible
+Z:\iCloud Drive\JALProjecten\SWR\SWRMeter2.jal:766: warning: assignment to smaller type; truncation possible
+Z:\iCloud Drive\JALProjecten\SWR\SWRMeter2.jal:773: warning: assignment to smaller type; truncation possible
+Z:\iCloud Drive\JALProjecten\SWR\SWRMeter2.jal:779: warning: assignment to smaller type; truncation possible
+Z:\iCloud Drive\JALProjecten\SWR\SWRMeter2.jal:785: warning: assignment to smaller type; truncation possible
+Z:\iCloud Drive\JALProjecten\SWR\SWRMeter2.jal:793: warning: assignment to smaller type; truncation possible
+Z:\iCloud Drive\JALProjecten\SWR\SWRMeter2.jal:797: warning: assignment to smaller type; truncation possible
+Z:\iCloud Drive\JALProjecten\SWR\SWRMeter2.jal:801: warning: assignment to smaller type; truncation possible
+Z:\iCloud Drive\JALProjecten\SWR\SWRMeter2.jal:806: warning: assignment to smaller type; truncation possible
+Z:\iCloud Drive\JALProjecten\SWR\SWRMeter2.jal:810: warning: assignment to smaller type; truncation possible
+Z:\iCloud Drive\JALProjecten\SWR\SWRMeter2.jal:814: warning: assignment to smaller type; truncation possible
+
+4546 tokens, 434740 chars; 10694 lines; 21 files
+generating PIC code pass 1
+generating PIC code pass 2
+writing result
+Code area: 25502 of 32768 used (bytes)
+Data area: 580 of 2048 used
+Software stack available: 1459 bytes
+Hardware stack depth 6 of 31
+0 errors, 26 warnings
+

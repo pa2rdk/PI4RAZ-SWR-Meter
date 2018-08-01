@@ -1,0 +1,1058 @@
+-- ---------------------------------------------------------------
+-- Title:GLCD SWR Meter
+--
+-- Author: Robert de Kok, Copyright (c) 2014, all rights reserved.
+-- ----------------------------------------------------------------
+include 18f4550
+  
+pragma target clock   8_000_000       -- 20_000_000
+
+pragma target OSC     INTOSC_PORTIO --hs
+OSCCON_IRCF = 0b_111
+UCON_USBEN  = 0       ;disable USB
+UCFG_UTRDIS = 1       ;disable USB
+UCFG = 0b_00001000
+pragma target WDT     disabled
+pragma target LVP     disabled
+
+-- GRAPHIC_LCD IO definition ------------------------
+
+var bit GLCD_CS1 is pin_c1 ;omgedraaid tov eigen versie
+var bit GLCD_CS2 is pin_c0 ;omgedraaid tov eigen versie
+var bit GLCD_RST is pin_c2
+var bit GLCD_RW is pin_e2
+var bit GLCD_E is pin_e0
+var bit GLCD_DI is pin_e1
+
+var bit GLCD_CS1_direction is pin_c0_direction
+var bit GLCD_CS2_direction is pin_c1_direction
+var bit GLCD_RST_direction is pin_c2_direction
+var bit GLCD_RW_direction is pin_e2_direction
+var bit GLCD_E_direction is pin_e0_direction
+var bit GLCD_DI_direction is pin_e1_direction
+
+var volatile byte GLCD_DATAPRT     is portD
+var volatile byte GLCD_DATAPRT_DIR is portD_direction
+const GLCD_CLIPPING = TRUE
+
+pin_b1_direction = input  ;button2
+pin_b2_direction = input  ;rotary
+pin_b3_direction = input  ;rotary
+pin_c6_direction = output ;led_red
+pin_c7_direction = output ;led_green
+;pin_b4_direction = output ;led_spare1
+;pin_b5_direction = output ;led_spare2
+
+pin_b4_direction = input ;mtr1_l1
+pin_b5_direction = input ;mtr1_l2
+pin_b0_direction = input ;mtr1_l3
+pin_b7_direction = output;mtr1_vo
+pin_a4_direction = input ;mtr2_l1
+pin_a5_direction = input ;mtr2_l2
+pin_a6_direction = input ;mtr2_l3
+pin_b6_direction = output;mtr2_vo
+
+alias led_green is pin_C7
+alias led_red is pin_C6
+;alias led_spare1 is pin_b4
+;alias led_spare2 is pin_b5
+alias rotary_dir is pin_b3
+alias mtr1_l1 is pin_b4
+alias mtr1_l2 is pin_b5
+alias mtr1_l3 is pin_b0
+alias mtr1_vo is pin_b6
+alias mtr2_l1 is pin_a4
+alias mtr2_l2 is pin_a5
+alias mtr2_l3 is pin_a6
+alias mtr2_vo is pin_b7
+
+const byte msg1[]    = "SWR Meter * By PA2RDK"
+const byte msg2[]    = "   WWW.PI4RAZ.NL"
+const byte msg3[]    = " Copyright PA2RDK (c)"
+const byte fwdstr[]  = "FWD"
+const byte refstr[]  = "REF ="
+const byte swrstr[]  = "SWR ="
+const byte peakst[]  = "PEAK="
+const byte watstr[]  = "W "
+const byte watXstr[]  = "0W "
+const byte sw2str[]  = "1:"
+const byte empstr[]  = " "
+const byte pntstr[]  = "."
+const byte starstr[] = "*"
+const byte forwart[] = "FWD"
+const byte reverse[] = "REF"
+const byte maxswr[]  = "HIGH "
+const byte swr1[]    = "1="
+const byte swr2[]    = "2="
+const byte power1[]  = "SWR1 Power "
+const byte power2[]  = "SWR2 Power "
+const byte mpr[]     = "Multiplier "
+const byte volt[]    = "5 Volt     "
+const byte voltOn[]  = "On "
+const byte voltOff[] = "Off"
+const byte isHF[]    = "HF "
+const byte is4M[]    = "4M "
+const byte isVHF[]   = "VHF"
+const byte isUHF[]   = "UHF"
+const byte isNC[]    = "N/C"
+const byte toLeft    = 64
+
+const byte SWRLOOKUP[] = {12,13,14,15,16,16,17,18,19,19,20,21,21,22,
+      23,23,24,25,25,26,27,28,28,29,30,31,32,32,
+      33,34,35,36,37,38,39,40,41,42,43,44,46,47,
+      48,49,51,52,54,55,57,58,60,62,64,65,67,69,
+      72,74,76,79,81,84,87,90,93,97,99}
+
+const byte PWRLOOKUP[] = {0,0,0,0,1,1,1,1,2,2,2,3,3,4,5,5,6,6,7,8,9,10,11,12,13,14,15,16,17,
+      18,19,20,22,23,25,26,27,29,30,32,34,35,37,39,41,42,44,46,48,50,52,
+      54,56,58,61,63,65,67,70,72,74,77,79,82,85,87,90,92,95,98,101,104,
+      107,110,113,116,119,122,125,128,131,134,138,141,145,148,151,155,
+      158,162,166,169,173,177,181,184,188,192,196,200,204,208,212,216}
+
+enable_digital_io()                                -- all pins digital I/O
+
+include delay
+include math
+include print
+include glcd_5x7_font                              -- font to be used
+include glcd_8x12_font                             -- font to be used
+include glcd_6x8_font                              -- font to be used
+include glcd_font                                  -- common font stuff
+include glcd_ks0108                                -- glcd device dependent library
+include glcd_common                                -- device independent glcd library
+include pic_data_eeprom
+;include SWRMeterHelpers
+
+glcd_font_use(FONT_6X8)                            -- activate font
+glcd_init()                                        -- initialize display
+
+led_green = 1
+led_red = 0
+;led_spare1 = 0
+;led_spare2 = 0
+
+var word i = 0
+var sword dy = 0
+var byte mtrMode = 1
+var byte menuNo = 1
+
+var bit auto1_vo  = 0
+var bit auto2_vo  = 0
+var bit red_on = 0
+
+procedure DrawDemo() is
+  glcd_pen_color = GLCD_BLACK                     -- pixel color
+  glcd_clear_screen()
+  for 2 loop
+    for ((GLCD_X_PIXELS / 2) - 1) using i loop              -- line animation
+      glcd_line(i * 2, 0, GLCD_X_PIXELS - i * 2 - 1, GLCD_Y_PIXELS - 1)
+      delay_1ms(3)
+    end loop
+    for (GLCD_Y_PIXELS - 1) using i loop
+      glcd_line(GLCD_X_PIXELS - 1, i, 0, GLCD_Y_PIXELS - i)
+      delay_1ms(3)
+    end loop
+  glcd_pen_color = GLCD_WHITE                  -- 'erase' first pattern
+  end loop
+  delay_100ms(2)
+  glcd_pen_color = GLCD_BLACK                     -- pixel color
+  glcd_clear_screen()
+end procedure
+
+DrawDemo()
+
+glcd_char_goto(0,10)
+print_string(glcd, msg1)
+glcd_char_goto(0,20)
+print_string(glcd, msg2)
+glcd_char_goto(2,35)
+print_string(glcd, msg3)
+
+delay_100ms(20)
+
+glcd_clear_screen()
+
+const bit ADC_HIGH_RESOLUTION = high
+const byte ADC_NCHANNEL = 1
+const byte ADC_NVREF = ADC_NO_EXT_VREF
+include adc
+adc_init()
+   
+var dword w1measure = 0
+var dword w2measure = 0
+var dword w3measure = 0
+var dword w4measure = 0
+var dword w5measure = 0
+var dword w6measure = 0
+var dword o1measure = 0
+var dword o2measure = 0
+var dword o3measure = 0
+var dword o4measure = 0
+var dword o5measure = 0
+var dword o6measure = 0
+
+var dword w1T1measure = 0
+var dword w2T1measure = 0
+var dword w4T1measure = 0
+var dword w5T1measure = 0
+var dword w1T2measure = 0
+var dword w2T2measure = 0
+var dword w4T2measure = 0
+var dword w5T2measure = 0
+
+var byte pmcount1 = 0
+var byte pmcount2 = 0
+var byte xpos = 0
+var byte ypos = 0
+var byte swr = 0
+var byte swrl = 0
+var byte swrh = 0
+var byte lpcount = 0
+var byte mtrUp = 0
+var byte mpr_hf  = 100
+var byte mpr_4m  = 100
+var byte mpr_vhf = 100
+var byte mpr_uhf = 100
+var bit mpv_hf  = 0
+var bit mpv_4m  = 0
+var bit mpv_vhf = 0
+var bit mpv_uhf = 0
+
+var byte mtype1 = 0
+var byte mtype2 = 0
+
+if data_eeprom(0)!=255 then
+  mpr_hf   = data_eeprom(0)
+  mpr_4m   = data_eeprom(1)
+  mpr_vhf  = data_eeprom(2)
+  mpr_uhf  = data_eeprom(3)
+  mpv_hf   = data_eeprom(4)
+  mpv_4m   = data_eeprom(5)
+  mpv_vhf  = data_eeprom(6)
+  mpv_uhf  = data_eeprom(7)
+end if
+
+procedure RecalcXY(word in Value) is
+   if Value>990 then
+      Value = 990
+   end if
+
+   xpos = (dword(SINLOOKUP[(990-Value)/11]))/5
+   ypos = (dword(SINLOOKUP[(Value)/11]))/5
+end procedure
+
+procedure RecalcSwr(word in a, word in b) is
+  if b>a then
+    swr=255
+  else
+    if a>0 then
+      if (b*100)/a >66 then
+        swr =  255
+      else
+        swr =  SWRLOOKUP[(b*100)/a]
+        if (b*100)/a <1 then
+          swr =  11
+        end if
+      end if
+    else
+      swr = 10
+    end if
+  end if
+  if b==0 then
+    swr  = 10
+  end if
+  
+  if swr>50 then
+    red_on = 1
+  end if
+  swrh = swr/10
+  swrl = swr-((swr/10)*10)
+end procedure
+
+procedure WriteSWR(bit in isTwee) is
+   if isTwee==0 then
+     RecalcSwr(PWRLOOKUP[w1measure/10],PWRLOOKUP[w2measure/10])
+   else
+     RecalcSwr(PWRLOOKUP[w4measure/10],PWRLOOKUP[w5measure/10])
+   end if
+
+   if swr==255 then
+     print_string(glcd,maxswr)
+   else
+     print_string(glcd,sw2str)
+     print_word_dec(glcd, swrh)
+     print_string(glcd,pntstr)
+     print_word_dec(glcd, swrl)
+   end if
+end procedure
+
+procedure SetMtrType() is
+     if (mtr1_l1==0) & (mtr1_l2==0) then
+       mtype1 = 0
+     end if
+     if (mtr1_l1==0) & (mtr1_l2==1) then
+       mtype1 = 1
+     end if
+     if (mtr1_l1==1) & (mtr1_l2==0) then
+       mtype1 = 2
+     end if
+     if (mtr1_l1==1) & (mtr1_l2==1) & (mtr1_l3==0) then
+       mtype1 = 3
+     end if
+     if (mtr1_l1==1) & (mtr1_l2==1) & (mtr1_l3==1) then
+       mtype1 = 4
+     end if
+
+     if (mtr2_l1==0) & (mtr2_l2==0) then
+       mtype2 = 0
+     end if
+     if (mtr2_l1==0) & (mtr2_l2==1) then
+       mtype2 = 1
+     end if
+     if (mtr2_l1==1) & (mtr2_l2==0) then
+       mtype2 = 2
+     end if
+     if (mtr2_l1==1) & (mtr2_l2==1) & (mtr2_l3==0) then
+       mtype2 = 3
+     end if
+     if (mtr2_l1==1) & (mtr2_l2==1) & (mtr2_l3==1) then
+       mtype2 = 4
+     end if
+end procedure
+
+procedure WriteMtrType(bit in isTwee) is
+   if isTwee==0 then
+     if (mtype1==0) then
+       print_string(glcd,isHF)
+     end if
+     if (mtype1==1) then
+       print_string(glcd,is4M)
+     end if
+     if (mtype1==2) then
+       print_string(glcd,isVHF)
+     end if
+     if (mtype1==3) then
+       print_string(glcd,isUHF)
+     end if
+     if (mtype1==4) then
+       print_string(glcd,isNC)
+     end if
+   else
+     if (mtype2==0) then
+       print_string(glcd,isHF)
+     end if
+     if (mtype2==1) then
+       print_string(glcd,is4M)
+     end if
+     if (mtype2==2) then
+       print_string(glcd,isVHF)
+     end if
+     if (mtype2==3) then
+       print_string(glcd,isUHF)
+     end if
+     if (mtype2==4) then
+       print_string(glcd,isNC)
+     end if
+   end if
+end procedure
+
+procedure DrawMeter(byte in b) is
+   glcd_pen_color = GLCD_BLACK
+   glcd_box(0+b,0,63+b,63)
+   glcd_box(0+b,52,63+b,63)
+   glcd_box(0+b,49,3+b,52)
+   glcd_box(60+b,49,63+b,52)
+   glcd_pen_color = GLCD_WHITE
+
+   glcd_box(1+b,53,62+b,62)
+
+   glcd_pen_color = GLCD_BLACK
+   glcd_char_goto(2+b,54)
+   ;print_string(glcd,forwart)
+   if b==0 then
+     WriteMtrType(0)
+   else
+     WriteMtrType(1)
+   end if
+   
+   glcd_char_goto(43+b,54)
+   print_string(glcd,reverse)
+   glcd_circle(31+b,57, 3)
+   glcd_line(30+b,55,32+b,59)
+
+   glcd_char_goto(2+b, 2)
+   if b==0 then
+     print_string(glcd,swr1)
+     WriteSWR(0)
+   else
+     print_string(glcd,swr2)
+     WriteSWR(1)
+   end if
+end procedure
+
+procedure PrintWattSign(bit in isTwee, byte in i) is
+   if isTwee==0 then
+     if (auto1_vo == 1) & (i>0) then
+       print_string(glcd,watXstr)
+     else
+       print_string(glcd,watstr)
+     end if
+   else
+     if (auto2_vo == 1) & (i>0) then
+       print_string(glcd,watXstr)
+     else
+       print_string(glcd,watstr)
+     end if
+   end if
+end procedure
+
+procedure WriteValues(byte in b, bit in isTwee) is
+   glcd_char_goto(2+b, 5)
+   ;print_string(glcd,fwdstr)
+   WriteMtrType(isTwee)
+
+   if isTwee==0 then
+     print_string(glcd,swr1)
+   else
+     print_string(glcd,swr2)
+   end if
+   
+   if isTwee==0 then
+     i = PWRLOOKUP[w1measure/10]
+   else
+     i = PWRLOOKUP[w4measure/10]
+   end if
+   print_word_dec(glcd, i)
+   PrintWattSign(isTwee,i)
+   
+   if i<10 then
+     print_string(glcd,empstr)
+   end if
+
+   glcd_char_goto(2+b, 20)
+   print_string(glcd,refstr)
+   if isTwee==0 then
+     i = PWRLOOKUP[w2measure/10]
+   else
+     i = PWRLOOKUP[w5measure/10]
+   end if
+   print_word_dec(glcd, i)
+   PrintWattSign(isTwee,i)
+   if i<10 then
+     print_string(glcd,empstr)
+   end if
+
+   glcd_char_goto(2+b, 35)
+   print_string(glcd,peakst)
+   if isTwee==0 then
+     i = PWRLOOKUP[w3measure/10]
+   else
+     i = PWRLOOKUP[w6measure/10]
+   end if
+   print_word_dec(glcd, i)
+   PrintWattSign(isTwee,i)
+   if i<10 then
+     print_string(glcd,empstr)
+   end if
+
+   glcd_char_goto(2+b, 50)
+   print_string(glcd,swrstr)
+   WriteSWR(isTwee)
+end procedure
+
+procedure WriteMenu() is
+   glcd_char_goto(2, 0)
+   if mtype1==0 then
+     print_string(glcd,isHF)
+   end if
+   if mtype1==1 then
+     print_string(glcd,is4M)
+   end if
+   if mtype1==2 then
+     print_string(glcd,isVHF)
+   end if
+   if mtype1==3 then
+     print_string(glcd,isUHF)
+   end if
+   if mtype1==4 then
+     print_string(glcd,isNC)
+   end if
+   print_string(glcd,empstr)
+   print_string(glcd,power1)
+   i = PWRLOOKUP[w1measure/10]
+   print_word_dec(glcd, i)
+   print_string(glcd,watstr)
+   if i<10 then
+     print_string(glcd,empstr)
+   end if
+   
+   glcd_char_goto(2, 10)
+   if mtype2==0 then
+     print_string(glcd,isHF)
+   end if
+   if mtype2==1 then
+     print_string(glcd,is4M)
+   end if
+   if mtype2==2 then
+     print_string(glcd,isVHF)
+   end if
+   if mtype2==3 then
+     print_string(glcd,isUHF)
+   end if
+   if mtype2==4 then
+     print_string(glcd,isNC)
+   end if
+   print_string(glcd,empstr)
+   print_string(glcd,power2)
+   i = PWRLOOKUP[w4measure/10]
+   print_word_dec(glcd, i)
+   print_string(glcd,watstr)
+   if i<10 then
+     print_string(glcd,empstr)
+   end if
+   
+   if menuNo<3 then
+     glcd_char_goto(2, 25)
+     print_string(glcd,empstr)
+     print_string(glcd,isHF)
+     glcd_char_goto(2, 35)
+     if menuNo==1 then
+       print_string(glcd,starstr)
+     else
+       print_string(glcd,empstr)
+     end if
+     print_string(glcd,mpr)
+     print_word_dec(glcd, mpr_hf)
+     if mpr_hf<10 then
+       print_string(glcd,empstr)
+     end if
+
+     glcd_char_goto(2, 45)
+     if menuNo==2 then
+       print_string(glcd,starstr)
+     else
+       print_string(glcd,empstr)
+     end if
+     print_string(glcd,volt)
+     if mpv_hf==1 then
+       print_string(glcd,voltOn)
+     else
+       print_string(glcd,voltOff)
+     end if
+   end if
+   
+   if (menuNo==3)|(menuNo==4) then
+     glcd_char_goto(2, 25)
+     print_string(glcd,empstr)
+     print_string(glcd,is4M)
+     glcd_char_goto(2, 35)
+     if menuNo==3 then
+       print_string(glcd,starstr)
+     else
+       print_string(glcd,empstr)
+     end if
+     print_string(glcd,mpr)
+     print_word_dec(glcd, mpr_4m)
+     if mpr_4m<10 then
+       print_string(glcd,empstr)
+     end if
+
+     glcd_char_goto(2, 45)
+     if menuNo==4 then
+       print_string(glcd,starstr)
+     else
+       print_string(glcd,empstr)
+     end if
+     print_string(glcd,volt)
+     if mpv_4m==1 then
+       print_string(glcd,voltOn)
+     else
+       print_string(glcd,voltOff)
+     end if
+   end if
+   
+   if (menuNo==5)|(menuNo==6) then
+     glcd_char_goto(2, 25)
+     print_string(glcd,empstr)
+     print_string(glcd,isVHF)
+     glcd_char_goto(2, 35)
+     if menuNo==5 then
+       print_string(glcd,starstr)
+     else
+       print_string(glcd,empstr)
+     end if
+     print_string(glcd,mpr)
+     print_word_dec(glcd, mpr_vhf)
+     if mpr_vhf<10 then
+       print_string(glcd,empstr)
+     end if
+
+     glcd_char_goto(2, 45)
+     if menuNo==6 then
+       print_string(glcd,starstr)
+     else
+       print_string(glcd,empstr)
+     end if
+     print_string(glcd,volt)
+     if mpv_vhf==1 then
+       print_string(glcd,voltOn)
+     else
+       print_string(glcd,voltOff)
+     end if
+   end if
+   
+   if menuNo>6 then
+     glcd_char_goto(2, 25)
+     print_string(glcd,empstr)
+     print_string(glcd,isUHF)
+     glcd_char_goto(2, 35)
+     if menuNo==7 then
+       print_string(glcd,starstr)
+     else
+       print_string(glcd,empstr)
+     end if
+     print_string(glcd,mpr)
+     print_word_dec(glcd, mpr_uhf)
+     if mpr_uhf<10 then
+       print_string(glcd,empstr)
+     end if
+
+     glcd_char_goto(2, 45)
+     if menuNo==8 then
+       print_string(glcd,starstr)
+     else
+       print_string(glcd,empstr)
+     end if
+     print_string(glcd,volt)
+     if mpv_uhf==1 then
+       print_string(glcd,voltOn)
+     else
+       print_string(glcd,voltOff)
+     end if
+   end if
+end procedure
+
+procedure MyInt is pragma interrupt
+  if INTCON_INT0IF then
+     INTCON_INT0IF = off
+  end if
+
+  if INTCON3_INT1IF then
+    if (mtrUp==0) then
+      mtrUp = 1
+    end if
+    INTCON3_INT1IF = off
+  end if
+
+  if INTCON3_INT2IF then
+    if (mtrUp==0) then
+      if (rotary_dir == 0) then
+        mtrUp = 2
+      else
+        mtrUp = 3
+      end if
+    end if
+    INTCON3_INT2IF = off
+  end if
+end procedure
+
+procedure MeasureADC() is
+   w1T1measure = adc_read(0)
+   w2T1measure = adc_read(1)
+   w4T1measure = adc_read(2)
+   w5T1measure = adc_read(3)
+
+   if w1T1measure > w1T2measure then
+     w1T2measure = w1T1measure
+   end if
+   if w2T1measure > w2T2measure then
+     w2T2measure = w2T1measure
+   end if
+   if w4T1measure > w4T2measure then
+     w4T2measure = w4T1measure
+   end if
+   if w5T1measure > w5T2measure then
+     w5T2measure = w5T1measure
+   end if
+ end procedure
+
+procedure HandleMenu() is
+   if (mtrUp==1) then
+     if mtrMode <7 then
+       mtrMode =7
+     else
+       menuNo = menuNo + 1
+       if (menuNo == 9) then
+         data_eeprom_write(0,mpr_hf)
+         data_eeprom_write(1,mpr_4m)
+         data_eeprom_write(2,mpr_vhf)
+         data_eeprom_write(3,mpr_uhf)
+         data_eeprom_write(4,mpv_hf)
+         data_eeprom_write(5,mpv_4m)
+         data_eeprom_write(6,mpv_vhf)
+         data_eeprom_write(7,mpv_uhf)
+
+         mtrMode = 1
+         menuNo = 1
+       end if
+     end if
+     mtrUp=0
+     glcd_clear_screen()
+   end if
+
+   if (mtrUp==2) then
+     if (mtrMode==7) then
+       if menuNo==1 then
+         mpr_hf = mpr_hf + 1
+       end if
+       if menuNo==2 then
+         mpv_hf = mpv_hf + 1
+       end if
+       if menuNo==3 then
+         mpr_4m = mpr_4m + 1
+       end if
+       if menuNo==4 then
+         mpv_4m = mpv_4m + 1
+       end if
+       if menuNo==5 then
+         mpr_vhf = mpr_vhf + 1
+       end if
+       if menuNo==6 then
+         mpv_vhf = mpv_vhf + 1
+       end if
+       if menuNo==7 then
+         mpr_uhf = mpr_uhf + 1
+       end if
+       if menuNo==8 then
+         mpv_uhf = mpv_uhf + 1
+       end if
+     else
+       mtrMode = mtrMode + 1
+       if mtrMode ==7 then
+         mtrMode =1
+       end if
+     end if
+     mtrUp=0
+     glcd_clear_screen()
+   end if
+
+   if (mtrUp==3) then
+     if (mtrMode==7) then
+       if menuNo==1 then
+         mpr_hf = mpr_hf - 1
+       end if
+       if menuNo==2 then
+         mpv_hf = mpv_hf - 1
+       end if
+       if menuNo==3 then
+         mpr_4m = mpr_4m - 1
+       end if
+       if menuNo==4 then
+         mpv_4m = mpv_4m - 1
+       end if
+       if menuNo==5 then
+         mpr_vhf = mpr_vhf - 1
+       end if
+       if menuNo==6 then
+         mpv_vhf = mpv_vhf - 1
+       end if
+       if menuNo==7 then
+         mpr_uhf = mpr_uhf - 1
+       end if
+       if menuNo==8 then
+         mpv_uhf = mpv_uhf - 1
+       end if
+     else
+       mtrMode = mtrMode - 1
+       if mtrMode ==0 then
+         mtrMode =6
+       end if
+     end if
+     mtrUp=0
+     glcd_clear_screen()
+   end if
+end procedure
+
+procedure MainLoop is
+   SetMtrType()
+
+   MeasureADC()
+   if mtrUP>0 then
+     HandleMenu()
+   end if
+   MeasureADC()
+   -- mtrMode
+   -- 1 M1   M2
+   -- 2 T1   T2
+   -- 3 M1   T1
+   -- 4 M1   T2
+   -- 5 T1   M2
+   -- 6 T2   M2
+
+   if red_on == 1 then
+     led_red = !led_red
+     led_green = 0
+   else
+     led_green = !led_green
+     led_red = 0
+   end if
+   MeasureADC()
+
+   red_on = 0
+   if (mtrMode ==1) | (mtrMode ==3) | (mtrMode ==4) then
+     DrawMeter(0)
+   end if
+   MeasureADC()
+   if (mtrMode ==1) | (mtrMode ==5) | (mtrMode ==6) then
+     DrawMeter(toLeft)
+   end if
+
+   MeasureADC()
+   w1measure = w1T2measure
+   w2measure = w2T2measure
+   w4measure = w4T2measure
+   w5measure = w5T2measure
+   
+   w1T1measure = 0
+   w2T1measure = 0
+   w4T1measure = 0
+   w5T1measure = 0
+   w1T2measure = 0
+   w2T2measure = 0
+   w4T2measure = 0
+   w5T2measure = 0
+
+   MeasureADC()
+   if mtype1 ==  0 then
+
+     if w1measure>800 then
+       auto1_vo = 1
+       mtr1_vo = 1
+     else
+       if auto1_vo == 1 then
+         if w1measure<70 then
+           auto1_vo = 0
+         end if
+       end if
+       if auto1_vo == 0 then
+          mtr1_vo = (mpv_hf == 1)
+       end if
+     end if
+
+     w1measure = dword(w1measure * mpr_hf)/100
+     w2measure = dword(w2measure * mpr_hf)/100
+   end if
+   MeasureADC()
+   if mtype1 ==  1 then
+     mtr1_vo = (mpv_4m == 1)
+     w1measure = dword(w1measure * mpr_4m)/100
+     w2measure = dword(w2measure * mpr_4m)/100
+   end if
+   MeasureADC()
+   if mtype1 ==  2 then
+     mtr1_vo = (mpv_vhf == 1)
+     w1measure = dword(w1measure * mpr_vhf)/100
+     w2measure = dword(w2measure * mpr_vhf)/100
+   end if
+   MeasureADC()
+   if mtype1 ==  3 then
+     mtr1_vo = (mpv_uhf == 1)
+     w1measure = dword(w1measure * mpr_uhf)/100
+     w2measure = dword(w2measure * mpr_uhf)/100
+   end if
+   MeasureADC()
+   if mtype1 ==  4 then
+     mtr1_vo = 0
+     w1measure = 0
+     w2measure = 0
+   end if
+   MeasureADC()
+
+   if mtype2 ==  0 then
+     if w4measure>800 then
+       auto2_vo = 1
+       mtr2_vo = 1
+     else
+       if auto2_vo == 1 then
+         if w4measure<70 then
+           auto2_vo = 0
+         end if
+       end if
+       if auto2_vo == 0 then
+          mtr2_vo = (mpv_hf == 1)
+       end if
+     end if
+
+     w4measure = dword(w4measure * mpr_hf)/100
+     w5measure = dword(w5measure * mpr_hf)/100
+   end if
+   MeasureADC()
+   if mtype2 ==  1 then
+      mtr2_vo = (mpv_4m == 1)
+      w4measure = dword(w4measure * mpr_4m)/100
+      w5measure = dword(w5measure * mpr_4m)/100
+   end if
+   MeasureADC()
+   if mtype2 ==  2 then
+      mtr2_vo = (mpv_vhf == 1)
+      w4measure = dword(w4measure * mpr_vhf)/100
+      w5measure = dword(w5measure * mpr_vhf)/100
+   end if
+   MeasureADC()
+   if mtype2 ==  3 then
+      mtr2_vo = (mpv_uhf == 1)
+      w4measure = dword(w4measure * mpr_uhf)/100
+      w5measure = dword(w5measure * mpr_uhf)/100
+   end if
+   MeasureADC()
+   if mtype2 ==  4 then
+     mtr2_vo = 0
+     w4measure = 0
+     w5measure = 0
+   end if
+   MeasureADC()
+
+   pmcount1 = pmcount1 + 1
+   if pmcount1 == 20 then
+     pmcount1 = 0
+     w3measure = 0
+   end if
+
+   pmcount2 = pmcount2 + 1
+   if pmcount2 == 20 then
+     pmcount2 = 0
+     w6measure = 0
+   end if
+
+   if w1measure>w3measure then
+     w3measure = w1measure
+     pmcount1 = 0
+   end if
+
+   if w4measure>w6measure then
+     w6measure = w4measure
+     pmcount2 = 0
+   end if
+
+   -- Verwijder oude wijzers
+   glcd_pen_color = GLCD_WHITE
+   MeasureADC()
+
+   if (mtrMode ==1) | (mtrMode ==3) | (mtrMode ==4) then
+     if o1measure!=w1measure then
+       RecalcXY(o1measure)
+       glcd_line(1,51,1+xpos,51-ypos)
+       glcd_circle(1+xpos,51-ypos, 1)
+     end if
+     MeasureADC()
+
+     if o2measure!=w2measure then
+      RecalcXY(o2measure)
+      glcd_line(62,51,62-xpos,51-ypos)
+      glcd_circle(62-xpos,51-ypos, 1)
+     end if
+     MeasureADC()
+
+     if o3measure!=w3measure then
+       RecalcXY(o3measure)
+       glcd_circle(1+xpos,51-ypos, 2)
+     end if
+   end if
+   MeasureADC()
+
+   if (mtrMode ==1) | (mtrMode ==5) | (mtrMode ==6) then
+     if o4measure!=w4measure then
+       RecalcXY(o4measure)
+       glcd_line(1+toLeft,51,1+xpos+toLeft,51-ypos)
+       glcd_circle(1+xpos+toLeft,51-ypos, 1)
+     end if
+     MeasureADC()
+
+     if o5measure!=w5measure then
+      RecalcXY(o5measure)
+      glcd_line(62+toLeft,51,62-xpos+toLeft,51-ypos)
+      glcd_circle(62-xpos+toLeft,51-ypos, 1)
+     end if
+     MeasureADC()
+
+     if o6measure!=w6measure then
+       RecalcXY(o6measure)
+       glcd_circle(1+xpos+toLeft,51-ypos, 2)
+     end if
+   end if
+   MeasureADC()
+
+   glcd_pen_color = GLCD_BLACK
+
+   if (mtrMode ==1) | (mtrMode ==3) | (mtrMode ==4) then
+     RecalcXY(w1measure)
+     glcd_line(1,51,1+xpos,51-ypos)
+     glcd_circle(1+xpos,51-ypos, 1)
+     MeasureADC()
+
+     RecalcXY(w2measure)
+     glcd_line(62,51,62-xpos,51-ypos)
+     glcd_circle(62-xpos,51-ypos, 1)
+     MeasureADC()
+
+     RecalcXY(w3measure)
+     glcd_circle(1+xpos,51-ypos, 2)
+   end if
+   MeasureADC()
+
+   if (mtrMode ==1) | (mtrMode ==5) | (mtrMode ==6) then
+     RecalcXY(w4measure)
+     glcd_line(1+toLeft,51,1+xpos+toLeft,51-ypos)
+     glcd_circle(1+xpos+toLeft,51-ypos, 1)
+     MeasureADC()
+
+     RecalcXY(w5measure)
+     glcd_line(62+toLeft,51,62-xpos+toLeft,51-ypos)
+     glcd_circle(62-xpos+toLeft,51-ypos, 1)
+     MeasureADC()
+
+     RecalcXY(w6measure)
+     glcd_circle(1+xpos+toLeft,51-ypos, 2)
+   end if
+   MeasureADC()
+
+   o1measure = w1measure
+   o2measure = w2measure
+   o3measure = w3measure
+   o4measure = w4measure
+   o5measure = w5measure
+   o6measure = w6measure
+
+   if (mtrMode ==2) | (mtrMode ==5) then
+     WriteValues(0,0)
+   end if
+   MeasureADC()
+   if (mtrMode ==3) then
+     WriteValues(toLeft,0)
+   end if
+   MeasureADC()
+   if (mtrMode ==2) | (mtrMode ==4) then
+     WriteValues(toLeft,1)
+   end if
+   MeasureADC()
+   if (mtrMode ==6) then
+     WriteValues(0,1)
+   end if
+   MeasureADC()
+   if (mtrMode ==7) then
+     WriteMenu()
+   end if
+   MeasureADC()
+
+   ;delay_1ms(5)
+end procedure
+
+RCON_IPEN  =0
+INTCON     =0b_1101_0000
+INTCON2    =0b_0000_0000
+INTCON3    =0b_0001_1000
+
+forever loop
+   MainLoop
+end loop
+

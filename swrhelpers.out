@@ -1,0 +1,50 @@
+jal 2.4o (compiled May  8 2011)
+generating p-code
+C:\JALPack\lib/pic_data_eeprom.jal:59: "eecon1_wr" not defined
+C:\JALPack\lib/pic_data_eeprom.jal:59: warning: boolean expression expected
+C:\JALPack\lib/pic_data_eeprom.jal:59: 'loop' expected (got 'eecon1_wr')
+C:\JALPack\lib/pic_data_eeprom.jal:59: '=' expected (got 'loop')
+C:\JALPack\lib/pic_data_eeprom.jal:59: "loop" not defined
+C:\JALPack\lib/pic_data_eeprom.jal:59: 'end' expected (got 'loop')
+C:\JALPack\lib/pic_data_eeprom.jal:59: {WHILE starts at C:\JALPack\lib/pic_data_eeprom.jal:59}
+C:\JALPack\lib/pic_data_eeprom.jal:59: "loop" not defined
+C:\JALPack\lib/pic_data_eeprom.jal:59: 'end' expected (got 'loop')
+C:\JALPack\lib/pic_data_eeprom.jal:59: {procedure starts at C:\JALPack\lib/pic_data_eeprom.jal:54}
+C:\JALPack\lib/pic_data_eeprom.jal:59: "loop" not defined
+C:\JALPack\lib/pic_data_eeprom.jal:59: unexpected token: "loop"
+C:\Pic2\Projecten\SWR\swrhelpers.jal:87: "pin_c1" not defined
+C:\Pic2\Projecten\SWR\swrhelpers.jal:87: '=' expected (got 'var')
+C:\Pic2\Projecten\SWR\swrhelpers.jal:88: "pin_c0" not defined
+C:\Pic2\Projecten\SWR\swrhelpers.jal:88: '=' expected (got 'var')
+C:\Pic2\Projecten\SWR\swrhelpers.jal:89: "pin_c2" not defined
+C:\Pic2\Projecten\SWR\swrhelpers.jal:89: '=' expected (got 'var')
+C:\Pic2\Projecten\SWR\swrhelpers.jal:90: "pin_e2" not defined
+C:\Pic2\Projecten\SWR\swrhelpers.jal:90: '=' expected (got 'var')
+C:\Pic2\Projecten\SWR\swrhelpers.jal:91: "pin_e0" not defined
+C:\Pic2\Projecten\SWR\swrhelpers.jal:91: '=' expected (got 'var')
+C:\Pic2\Projecten\SWR\swrhelpers.jal:92: "pin_e1" not defined
+C:\Pic2\Projecten\SWR\swrhelpers.jal:92: '=' expected (got 'var')
+C:\Pic2\Projecten\SWR\swrhelpers.jal:94: "pin_c0_direction" not defined
+C:\Pic2\Projecten\SWR\swrhelpers.jal:94: '=' expected (got 'var')
+C:\Pic2\Projecten\SWR\swrhelpers.jal:95: "pin_c1_direction" not defined
+C:\Pic2\Projecten\SWR\swrhelpers.jal:95: '=' expected (got 'var')
+C:\Pic2\Projecten\SWR\swrhelpers.jal:96: "pin_c2_direction" not defined
+C:\Pic2\Projecten\SWR\swrhelpers.jal:96: '=' expected (got 'var')
+C:\Pic2\Projecten\SWR\swrhelpers.jal:97: "pin_e2_direction" not defined
+C:\Pic2\Projecten\SWR\swrhelpers.jal:97: '=' expected (got 'var')
+C:\Pic2\Projecten\SWR\swrhelpers.jal:98: "pin_e0_direction" not defined
+C:\Pic2\Projecten\SWR\swrhelpers.jal:98: '=' expected (got 'var')
+C:\Pic2\Projecten\SWR\swrhelpers.jal:99: "pin_e1_direction" not defined
+C:\Pic2\Projecten\SWR\swrhelpers.jal:99: '=' expected (got 'var')
+C:\Pic2\Projecten\SWR\swrhelpers.jal:101: "portd" not defined
+C:\Pic2\Projecten\SWR\swrhelpers.jal:101: '=' expected (got 'var')
+C:\Pic2\Projecten\SWR\swrhelpers.jal:102: "portd_direction" not defined
+C:\Pic2\Projecten\SWR\swrhelpers.jal:102: '=' expected (got 'const')
+C:\Pic2\Projecten\SWR\swrhelpers.jal:103: "true" not defined
+C:\Pic2\Projecten\SWR\swrhelpers.jal:103: constant expression expected
+C:\Pic2\Projecten\SWR\swrhelpers.jal:103: '=' expected (got 'pin_b1_direction')
+C:\Pic2\Projecten\SWR\swrhelpers.jal:105: "pin_b1_direction" not defined
+
+C:\Pic2\Projecten\SWR\swrhelpers.jal:105: unexpected token: pin_b1_direction
+44 errors, 1 warnings
+

@@ -1,0 +1,20 @@
+jal 2.4o (compiled May  8 2011)
+
+generating p-code
+swrhelpers.jal:264: warning: assignment to smaller type; truncation possible
+swrhelpers.jal:283: warning: assignment to smaller type; truncation possible
+swrhelpers.jal:284: warning: assignment to smaller type; truncation possible
+C:\Pic2\Projecten\SWR\FontTester.jal:41: warning: assignment to smaller type; truncation possible
+C:\Pic2\Projecten\SWR\FontTester.jal:41: warning: assignment to smaller type; truncation possible
+C:\Pic2\Projecten\SWR\FontTester.jal:45: warning: assignment to smaller type; truncation possible
+C:\Pic2\Projecten\SWR\FontTester.jal:45: warning: assignment to smaller type; truncation possible
+2393 tokens, 268272 chars; 5950 lines; 17 files
+generating PIC code pass 1
+generating PIC code pass 2
+writing result
+Code area: 7416 of 32768 used (bytes)
+Data area: 155 of 2048 used
+Software stack available: 1884 bytes
+Hardware stack depth 4 of 31
+0 errors, 7 warnings
+

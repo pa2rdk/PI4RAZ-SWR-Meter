@@ -1,0 +1,34 @@
+jal 2.4o (compiled May  8 2011)
+generating p-code
+C:\Pic2\Projecten\SWR\SWRMeter2_DFR_2.jal:152: warning: assignment to smaller type; truncation possible
+C:\Pic2\Projecten\SWR\SWRMeter2_DFR_2.jal:152: warning: assignment to smaller type; truncation possible
+C:\Pic2\Projecten\SWR\SWRMeter2_DFR_2.jal:156: warning: assignment to smaller type; truncation possible
+C:\Pic2\Projecten\SWR\SWRMeter2_DFR_2.jal:156: warning: assignment to smaller type; truncation possible
+C:\Pic2\Projecten\SWR\SWRMeter2_DFR_2.jal:260: warning: assignment to smaller type; truncation possible
+C:\Pic2\Projecten\SWR\SWRMeter2_DFR_2.jal:261: warning: assignment to smaller type; truncation possible
+C:\Pic2\Projecten\SWR\SWRMeter2_DFR_2.jal:489: warning: assignment to smaller type; truncation possible
+C:\Pic2\Projecten\SWR\SWRMeter2_DFR_2.jal:503: warning: assignment to smaller type; truncation possible
+C:\Pic2\Projecten\SWR\SWRMeter2_DFR_2.jal:516: warning: assignment to smaller type; truncation possible
+C:\Pic2\Projecten\SWR\SWRMeter2_DFR_2.jal:1144: warning: assignment to smaller type; truncation possible
+C:\Pic2\Projecten\SWR\SWRMeter2_DFR_2.jal:1151: warning: assignment to smaller type; truncation possible
+C:\Pic2\Projecten\SWR\SWRMeter2_DFR_2.jal:1158: warning: assignment to smaller type; truncation possible
+C:\Pic2\Projecten\SWR\SWRMeter2_DFR_2.jal:1166: warning: assignment to smaller type; truncation possible
+C:\Pic2\Projecten\SWR\SWRMeter2_DFR_2.jal:1173: warning: assignment to smaller type; truncation possible
+C:\Pic2\Projecten\SWR\SWRMeter2_DFR_2.jal:1180: warning: assignment to smaller type; truncation possible
+C:\Pic2\Projecten\SWR\SWRMeter2_DFR_2.jal:1189: warning: assignment to smaller type; truncation possible
+C:\Pic2\Projecten\SWR\SWRMeter2_DFR_2.jal:1194: warning: assignment to smaller type; truncation possible
+C:\Pic2\Projecten\SWR\SWRMeter2_DFR_2.jal:1199: warning: assignment to smaller type; truncation possible
+C:\Pic2\Projecten\SWR\SWRMeter2_DFR_2.jal:1205: warning: assignment to smaller type; truncation possible
+
+C:\Pic2\Projecten\SWR\SWRMeter2_DFR_2.jal:1210: warning: assignment to smaller type; truncation possible
+C:\Pic2\Projecten\SWR\SWRMeter2_DFR_2.jal:1215: warning: assignment to smaller type; truncation possible
+5425 tokens, 412333 chars; 10624 lines; 19 files
+generating PIC code pass 1
+generating PIC code pass 2
+writing result
+Code area: 24240 of 32768 used (bytes)
+Data area: 610 of 2048 used
+Software stack available: 1429 bytes
+Hardware stack depth 6 of 31
+0 errors, 21 warnings
+

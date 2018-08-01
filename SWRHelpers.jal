@@ -1,0 +1,302 @@
+include pic_data_eeprom
+include math
+
+const byte msg1[]    = "SWR Meter * By PA2RDK"
+const byte msg2[]    = "  PI3RAZ.NL"
+const byte msg3[]    = " Copyright PA2RDK (c)"
+const byte msg4[]    = "  Version 3.5 HS"
+
+const byte msg5[]    = "Meter in reverse mode"
+const byte msg6[]    = "Meter in normal mode"
+
+const byte fwdstr[]  = "FWD"
+const byte refstr[]  = "REF ="
+const byte swrstr[]  = "SWR ="
+const byte swrxstr[] = "SWXX="
+const byte peakst[]  = "PEAK="
+const byte watstr[]  = "W "
+const byte watXstr[] = "0W "
+const byte sw2str[]  = "1:"
+const byte empstr[]  = " "
+const byte pntstr[]  = "."
+const byte starstr[] = "*"
+const byte forwart[] = "FWD"
+const byte reverse[] = "REF"
+const byte maxswr[]  = "HIGH "
+const byte swr1[]    = "1="
+const byte swr2[]    = "2="
+const byte power1[]  = "SWR1 Power "
+const byte power2[]  = "SWR2 Power "
+const byte mpr[]     = "Multiplier "
+const byte volt[]    = "5 Volt     "
+const byte voltOn[]  = "On "
+const byte voltOff[] = "Off"
+const byte isHF[]    = "HF "
+const byte is4M[]    = "4M "
+const byte isVHF[]   = "VHF"
+const byte isUHF[]   = "UHF"
+const byte isSHF[]   = "SHF"
+const byte isNC[]    = "N/C"
+const byte toLeft    = 64
+
+const byte headIsHF   = 0
+const byte headIs4M   = 1
+const byte headIsVHF  = 2
+const byte headIsUHF  = 3
+const byte headIsSHF  = 4
+const byte headIsNC   = 5
+
+const byte DispNull = 0
+const byte DispAnalog1Analog2 = 1
+const byte DispValues1Values2 = 2
+const byte DispAnalog1Values1 = 3
+const byte DispAnalog1Values2 = 4
+const byte DispValues1Analog2 = 5
+const byte DispValues2Analog2 = 6
+const byte DispOnlyAnalog1 = 7
+const byte DispOnlyAnalog2 = 8
+const byte DispMenu = 9
+
+const bit isMeter1 = 0
+const bit isMeter2 = 1
+
+const byte menuMin      = 0
+const byte menuHFAmpl   = 1
+const byte menuHFVolt   = 2
+const byte menu4MAmpl   = 3
+const byte menu4MVolt   = 4
+const byte menuVHFAmpl  = 5
+const byte menuVHFVolt  = 6
+const byte menuUHFAmpl  = 7
+const byte menuUHFVolt  = 8
+const byte menuSHFAmpl  = 9
+const byte menuSHFVolt  = 10
+const byte menuMax      = 11
+
+const byte RotaryNull = 0
+const byte RotaryPressed = 1
+const byte RotaryLeft = 2
+const byte RotaryRight = 3
+
+const byte PWRLOOKUP[] = {0,0,0,0,1,1,1,1,2,2,2,3,3,4,5,5,6,6,7,8,9,10,11,12,13,14,15,16,17,
+      18,19,20,22,23,25,26,27,29,30,32,34,35,37,39,41,42,44,46,48,50,52,
+      54,56,58,61,63,65,67,70,72,74,77,79,82,85,87,90,92,95,98,101,104,
+      107,110,113,116,119,122,125,128,131,134,138,141,145,148,151,155,
+      158,162,166,169,173,177,181,184,188,192,196,200,204,208,212,216}
+
+var bit GLCD_CS1 is pin_c1 ;omgedraaid tov eigen versie  (c0 is eigen versie, c1 is bouwpakket)
+var bit GLCD_CS2 is pin_c0  ;omgedraaid tov eigen versie  (c1 is eigen versie, c0 is bouwpakket)
+var bit GLCD_RST is pin_c2
+var bit GLCD_RW is pin_e2
+var bit GLCD_E is pin_e0
+var bit GLCD_DI is pin_e1
+
+var bit GLCD_CS1_direction is pin_c0_direction
+var bit GLCD_CS2_direction is pin_c1_direction
+var bit GLCD_RST_direction is pin_c2_direction
+var bit GLCD_RW_direction is pin_e2_direction
+var bit GLCD_E_direction is pin_e0_direction
+var bit GLCD_DI_direction is pin_e1_direction
+
+var volatile byte GLCD_DATAPRT     is portD
+var volatile byte GLCD_DATAPRT_DIR is portD_direction
+const GLCD_CLIPPING = TRUE
+
+pin_b1_direction = input  ;button2
+pin_b2_direction = input  ;rotary
+pin_b3_direction = input  ;rotary
+pin_c6_direction = output ;led_red
+pin_c7_direction = output ;led_green
+;pin_b4_direction = output ;led_spare1
+;pin_b5_direction = output ;led_spare2
+
+pin_b4_direction = input ;mtr1_l1
+pin_b5_direction = input ;mtr1_l2
+pin_b0_direction = input ;mtr1_l3
+pin_b7_direction = output;mtr1_vo
+pin_a4_direction = input ;mtr2_l1
+pin_a5_direction = input ;mtr2_l2
+pin_a6_direction = input ;mtr2_l3
+pin_b6_direction = output;mtr2_vo
+
+alias led_green is pin_C7
+alias led_red is pin_C6
+;alias led_spare1 is pin_b4
+;alias led_spare2 is pin_b5
+alias rotary_dir is pin_b3
+alias mtr1_l1 is pin_b5
+alias mtr1_l2 is pin_b4
+alias mtr1_l3 is pin_b0
+alias mtr1_vo is pin_b6
+alias mtr2_l1 is pin_a4
+alias mtr2_l2 is pin_a5
+alias mtr2_l3 is pin_a6
+alias mtr2_vo is pin_b7
+
+var dword w1measure = 0
+var dword w2measure = 0
+var dword w3measure = 0
+var dword w4measure = 0
+var dword w5measure = 0
+var dword w6measure = 0
+var dword o1measure = 0
+var dword o2measure = 0
+var dword o3measure = 0
+var dword o4measure = 0
+var dword o5measure = 0
+var dword o6measure = 0
+var dword c1measure = 0
+var dword c2measure = 0
+var dword c3measure = 0
+var dword c4measure = 0
+var dword c5measure = 0
+var dword c6measure = 0
+var word m1measure = 0
+var word m2measure = 0
+var word m3measure = 0
+var word m4measure = 0
+var word m5measure = 0
+var word m6measure = 0
+
+var byte pmcount1 = 0
+var byte pmcount2 = 0
+var byte xpos = 0
+var byte ypos = 0
+var byte swr = 0
+var byte swrl = 0
+var byte swrh = 0
+var byte lpcount = 0
+var byte rotaryFunction = RotaryNull
+var byte mpr_hf   = 100
+var byte mpr_4m   = 100
+var byte mpr_vhf  = 100
+var byte mpr_uhf  = 100
+var byte mpr_shf  = 100
+var bit mpv_hf   = 0
+var bit mpv_4m   = 0
+var bit mpv_vhf  = 0
+var bit mpv_uhf  = 0
+var bit mpv_shf  = 0
+
+var byte mtype1 = 0
+var byte mtype2 = 0
+
+var dword menuPressed1 = 0
+var dword menuPressed2 = 0
+
+led_green = 1
+led_red = 0
+var word i = 0
+
+var byte mtrMode = DispAnalog1Analog2
+var byte oldMode = DispAnalog1Analog2
+var byte menuNo = menuHFAmpl
+
+var bit auto1_vo   = 0
+var bit auto2_vo   = 0
+var byte cnt1_vo   = 0
+var byte cnt2_vo   = 0
+var bit red_on     = 0
+var byte toUHF     = 0
+var byte isReverse = 0
+
+procedure readEeprom() is
+  if data_eeprom(0)!=255 then
+    mpr_hf   = data_eeprom(0)
+    mpr_4m   = data_eeprom(1)
+    mpr_vhf  = data_eeprom(2)
+    mpr_uhf  = data_eeprom(3)
+    mpr_shf  = data_eeprom(4)
+    mpv_hf   = data_eeprom(5)
+    mpv_4m   = data_eeprom(6)
+    mpv_vhf  = data_eeprom(7)
+    mpv_uhf  = data_eeprom(8)
+    mpv_shf  = data_eeprom(9)
+    mtrMode  = data_eeprom(10)
+  end if
+end procedure
+
+procedure writeEeprom() is
+  data_eeprom_write(0,mpr_hf)
+  data_eeprom_write(1,mpr_4m)
+  data_eeprom_write(2,mpr_vhf)
+  data_eeprom_write(3,mpr_uhf)
+  data_eeprom_write(4,mpr_shf)
+  data_eeprom_write(5,mpv_hf)
+  data_eeprom_write(6,mpv_4m)
+  data_eeprom_write(7,mpv_vhf)
+  data_eeprom_write(8,mpv_uhf)
+  data_eeprom_write(9,mpv_shf)
+  data_eeprom_write(10,mtrMode)
+end procedure
+
+procedure SetMtrType() is
+     if (mtr1_l1==0) & (mtr1_l2==0) & (mtr1_l3==0) then
+       mtype1 = headIsHF
+     end if
+     if (mtr1_l1==0) & (mtr1_l2==1) then
+       mtype1 = headIs4M
+     end if
+     if (mtr1_l1==1) & (mtr1_l2==0) & (toUHF == 0) then
+       mtype1 = headIsVHF
+     end if
+     if (mtr1_l1==1) & (mtr1_l2==0) & (toUHF == 1) then
+       mtype1 = headIsUHF
+     end if
+     if (mtr1_l1==1) & (mtr1_l2==1) & (mtr1_l3==0) then
+       mtype1 = headIsUHF
+     end if
+     if (mtr1_l1==0) & (mtr1_l2==0) & (mtr1_l3==1) then
+       mtype1 = headIsSHF
+     end if
+     if (mtr1_l1==1) & (mtr1_l2==1) & (mtr1_l3==1) then
+       mtype1 = headIsNC
+     end if
+
+     if (mtr2_l1==0) & (mtr2_l2==0) & (mtr2_l3==0) then
+       mtype2 = headIsHF
+     end if
+     if (mtr2_l1==0) & (mtr2_l2==1) then
+       mtype2 = headIs4M
+     end if
+     if (mtr2_l1==1) & (mtr2_l2==0) & (toUHF == 0) then
+       mtype2 = headIsVHF
+     end if
+     if (mtr2_l1==1) & (mtr2_l2==0) & (toUHF == 1) then
+       mtype2 = headIsUHF
+     end if
+     if (mtr2_l1==1) & (mtr2_l2==1) & (mtr2_l3==0) then
+       mtype2 = headIsUHF
+     end if
+     if (mtr2_l1==0) & (mtr2_l2==0) & (mtr2_l3==1) then
+       mtype2 = headIsSHF
+     end if
+     if (mtr2_l1==1) & (mtr2_l2==1) & (mtr2_l3==1) then
+       mtype2 = headIsNC
+     end if
+end procedure
+
+procedure RecalcSwr(word in a, word in b) is
+  if a>b then
+     swr = ((a+b)*10)/(a-b)
+  else
+    swr=255
+  end if
+  if a==0 then
+    swr=10
+  end if
+
+  if swr>30 then
+    red_on = 1
+  end if
+  swrh = swr/10
+  swrl = swr-((swr/10)*10)
+end procedure
+
+procedure RecalcXY(word in Value) is
+   if Value>990 then
+      Value = 990
+   end if
+   xpos = (dword(SINLOOKUP[(990-Value)/11]))/5
+   ypos = (dword(SINLOOKUP[(Value)/11]))/5
+end procedure

@@ -1,0 +1,81 @@
+-- ---------------------------------------------------------------
+-- Title:GLCD SWR Meter
+--
+-- Author: Robert de Kok, Copyright (c) 2014, all rights reserved.
+-- ----------------------------------------------------------------
+include 18f4550
+include SWRHelpers
+
+pragma target clock   8_000_000       -- 20_000_000
+pragma target OSC     INTOSC_PORTIO --hs
+OSCCON_IRCF = 0b_111
+UCON_USBEN  = 0       ;disable USB
+UCFG_UTRDIS = 1       ;disable USB
+UCFG = 0b_00001000
+pragma target WDT     disabled
+pragma target LVP     disabled
+
+enable_digital_io()                                -- all pins digital I/O
+
+include delay
+include print
+include glcd_5x7_font                              -- font to be used
+include glcd_8x12_font                             -- font to be used
+include glcd_6x8_font                              -- font to be used
+include glcd_12x16_font                             -- font to be used
+include glcd_ks0108                                -- glcd device dependent library
+include glcd_common                                -- device independent glcd library
+include glcd_font                                  -- common font stuff
+
+
+glcd_font_use(FONT_6X8)                            -- activate font
+glcd_init()
+
+const byte msg66[]    = "WWWwww"                                     -- initialize display
+
+procedure DrawDemo() is
+  glcd_pen_color = GLCD_BLACK                     -- pixel color
+  glcd_clear_screen()
+  for 2 loop
+    for ((GLCD_X_PIXELS / 2) - 1) using i loop              -- line animation
+      glcd_line(i * 2, 0, GLCD_X_PIXELS - i * 2 - 1, GLCD_Y_PIXELS - 1)
+      delay_1ms(3)
+    end loop
+    for (GLCD_Y_PIXELS - 1) using i loop
+      glcd_line(GLCD_X_PIXELS - 1, i, 0, GLCD_Y_PIXELS - i)
+      delay_1ms(3)
+    end loop
+  glcd_pen_color = GLCD_WHITE                  -- 'erase' first pattern
+  end loop
+  delay_100ms(2)
+  glcd_pen_color = GLCD_BLACK                     -- pixel color
+  glcd_clear_screen()
+end procedure
+
+DrawDemo()
+glcd_font_use(FONT_5X7)
+glcd_char_goto(0,10)
+print_string(glcd, msg2)
+glcd_font_use(FONT_6X8)
+glcd_char_goto(0,25)
+print_string(glcd, msg2)
+glcd_font_use(FONT_8X12)
+glcd_char_goto(0,36)
+print_string(glcd, msg2)
+glcd_char_goto(0,50)
+--print_string(glcd, msg2)
+
+glcd_font_use(FONT_5X7)
+print_string(glcd, msg66)
+--glcd_font_use(FONT_6X8)
+--print_string(glcd, msg66)
+--glcd_font_use(FONT_8X12)
+--print_string(glcd, msg66)
+
+delay_100ms(20)
+
+forever loop
+
+end loop
+
+
